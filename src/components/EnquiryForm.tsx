@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Send, CheckCircle, AlertCircle, Phone, Mail, User, MapPin, MessageSquare } from 'lucide-react';
 
 export default function EnquiryForm() {
 
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyRO6worWcdg3rtiHUHSYQ6gKiJvHWQe1OqQbJCWCG8DXzcIiKYNyhf1OmXPSfiWPH-A/exec";
+  const GOOGLE_SCRIPT_URL =
+    "https://script.google.com/macros/s/AKfycbzyRO6worWcdg3rtiHUHSYQ6gKiJvHWQe1OqQbJCWCG8DXzcIiKYNyhf1OmXPSfiWPH-A/exec";
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,102 +26,106 @@ export default function EnquiryForm() {
     }
 
     setStatus('loading');
+    setErrorMessage('');
 
     try {
       const response = await fetch(GOOGLE_SCRIPT_URL, {
         method: "POST",
-        mode: "no-cors",   // required for Google Apps Script public web app
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData)   // ✅ send JSON but WITHOUT header
       });
 
-      // Google Apps Script with no-cors returns opaque response
-      // So if request didn't throw error → assume success
-      setStatus('success');
-      setFormData({
-        name: '',
-        phone: '',
-        email: '',
-        destination: '',
-        message: ''
-      });
+      const result = await response.json();
 
-    } catch (error: any) {
+      if (result.status === "success") {
+        setStatus('success');
+        setFormData({
+          name: '',
+          phone: '',
+          email: '',
+          destination: '',
+          message: ''
+        });
+      } else {
+        setStatus('error');
+        setErrorMessage(result.message || "Submission failed");
+      }
+
+    } catch (error) {
+      console.error(error);
       setStatus('error');
-      setErrorMessage("Failed to send enquiry. Try again.");
+      setErrorMessage("Network error. Please try again.");
     }
   };
 
   return (
-    <div className="bg-white p-8 md:p-12 rounded-[40px] shadow-2xl shadow-zinc-200/50 border border-zinc-100 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-0" />
+    <div className="bg-white p-8 md:p-12 rounded-[40px] shadow-2xl border relative overflow-hidden">
 
-      <div className="relative z-10">
-        <h3 className="text-3xl font-bold text-zinc-900 mb-8">Plan Your Dream Trip</h3>
+      <h3 className="text-3xl font-bold mb-8">Plan Your Dream Trip</h3>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
 
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-            className="w-full border rounded-lg p-3"
-          />
+        <input
+          type="text"
+          placeholder="Full Name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+          className="w-full border rounded-lg p-3"
+        />
 
-          <input
-            type="tel"
-            placeholder="Phone Number"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            required
-            className="w-full border rounded-lg p-3"
-          />
+        <input
+          type="tel"
+          placeholder="Phone Number"
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          required
+          className="w-full border rounded-lg p-3"
+        />
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full border rounded-lg p-3"
-          />
+        <input
+          type="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          className="w-full border rounded-lg p-3"
+        />
 
-          <input
-            type="text"
-            placeholder="Destination"
-            value={formData.destination}
-            onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-            className="w-full border rounded-lg p-3"
-          />
+        <input
+          type="text"
+          placeholder="Destination"
+          value={formData.destination}
+          onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+          className="w-full border rounded-lg p-3"
+        />
 
-          <textarea
-            placeholder="Message"
-            value={formData.message}
-            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-            className="w-full border rounded-lg p-3"
-          />
+        <textarea
+          placeholder="Message"
+          value={formData.message}
+          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+          className="w-full border rounded-lg p-3"
+        />
 
-          <button
-            type="submit"
-            className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold"
-            disabled={status === 'loading'}
-          >
-            {status === 'loading' ? "Sending..." : "Send Enquiry"}
-          </button>
+        <button
+          type="submit"
+          className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold"
+          disabled={status === 'loading'}
+        >
+          {status === 'loading' ? "Sending..." : "Send Enquiry"}
+        </button>
 
-          {status === 'success' && (
-            <p className="text-green-600 font-semibold">Enquiry sent successfully!</p>
-          )}
+        {status === 'success' && (
+          <p className="text-green-600 font-semibold">
+            Enquiry sent successfully!
+          </p>
+        )}
 
-          {status === 'error' && (
-            <p className="text-red-600 font-semibold">{errorMessage}</p>
-          )}
+        {status === 'error' && (
+          <p className="text-red-600 font-semibold">
+            {errorMessage}
+          </p>
+        )}
 
-        </form>
-      </div>
+      </form>
     </div>
   );
 }
