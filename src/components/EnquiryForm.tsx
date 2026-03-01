@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 
 export default function EnquiryForm() {
 
-  const GOOGLE_SCRIPT_URL =
-    "https://script.google.com/macros/s/AKfycbzyRO6worWcdg3rtiHUHSYQ6gKiJvHWQe1OqQbJCWCG8DXzcIiKYNyhf1OmXPSfiWPH-A/exec";
+  const API_URL = "/api/enquiry";
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyRO6worWcdg3rtiHUHSYQ6gKiJvHWQe1OqQbJCWCG8DXzcIiKYNyhf1OmXPSfiWPH-A/exec";
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,31 +28,61 @@ export default function EnquiryForm() {
     setStatus('loading');
     setErrorMessage('');
 
+    // First try the local server endpoint (works in dev or if you host a server).
+    let usedAppScript = false;
+
     try {
-      await fetch(GOOGLE_SCRIPT_URL, {
+      const res = await fetch(API_URL, {
         method: "POST",
-        mode: "no-cors",              // ⭐ REQUIRED
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify(formData)
       });
 
-      // If request didn't crash → success
-      setStatus('success');
+      const data = await res.json().catch(() => null);
 
-      setFormData({
-        name: '',
-        phone: '',
-        email: '',
-        destination: '',
-        message: ''
-      });
+      if (!res.ok) {
+        // If local API exists but returned an error, fall back to Apps Script
+        usedAppScript = true;
+      } else {
+        setStatus('success');
+        setFormData({ name: '', phone: '', email: '', destination: '', message: '' });
+        return;
+      }
 
     } catch (error) {
-      console.error(error);
-      setStatus('error');
-      setErrorMessage("Network error. Please try again.");
+      // Network error (e.g. no local server) → fallback to Apps Script
+      usedAppScript = true;
+    }
+
+    if (usedAppScript) {
+      try {
+        // When the site is hosted statically (e.g., GitHub Pages) there is no server,
+        // so we POST to the Google Apps Script. Browsers block reading the response
+        // due to CORS, so use `mode: 'no-cors'` and a URL-encoded body. Treat a
+        // fulfilled fetch as success.
+        const formBody = new URLSearchParams();
+        formBody.append('name', formData.name);
+        formBody.append('phone', formData.phone);
+        formBody.append('email', formData.email);
+        formBody.append('destination', formData.destination);
+        formBody.append('message', formData.message);
+
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: formBody
+        });
+
+        setStatus('success');
+        setFormData({ name: '', phone: '', email: '', destination: '', message: '' });
+
+      } catch (err) {
+        console.error(err);
+        setStatus('error');
+        setErrorMessage('Network error. Please try again.');
+      }
     }
   };
 
