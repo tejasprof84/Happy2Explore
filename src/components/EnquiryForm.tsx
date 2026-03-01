@@ -29,26 +29,25 @@ export default function EnquiryForm() {
     setErrorMessage('');
 
     try {
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
+      await fetch(GOOGLE_SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(formData)   // ✅ send JSON but WITHOUT header
+        mode: "no-cors",              // ⭐ REQUIRED
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
       });
 
-      const result = await response.json();
+      // If request didn't crash → success
+      setStatus('success');
 
-      if (result.status === "success") {
-        setStatus('success');
-        setFormData({
-          name: '',
-          phone: '',
-          email: '',
-          destination: '',
-          message: ''
-        });
-      } else {
-        setStatus('error');
-        setErrorMessage(result.message || "Submission failed");
-      }
+      setFormData({
+        name: '',
+        phone: '',
+        email: '',
+        destination: '',
+        message: ''
+      });
 
     } catch (error) {
       console.error(error);
